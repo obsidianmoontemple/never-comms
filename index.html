@@ -192,6 +192,7 @@
   box-shadow: 0 0 7px 2px rgba(255,59,48,0.9);
 }
 .nw-switch:hover .housing { border-color: #2a3020; }
+.nw-switch:focus-visible .housing { outline: 2px solid var(--amber); outline-offset: 2px; }
 
 .nw-switch .plate {
   margin-top: 2px;
@@ -314,6 +315,10 @@
 .nw-screen::-webkit-scrollbar { width: 6px; }
 .nw-screen::-webkit-scrollbar-track { background: transparent; }
 .nw-screen::-webkit-scrollbar-thumb { background: var(--amber-dim); border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-bar, .nw-switch .lever, .nw-grille::after { transition: none; }
+}
 </style>
 
 <div class="nw-root">
@@ -356,44 +361,24 @@
 <script>
 (function(){
   // ─────────────────────────────────────────────────────────────
-  // Paste your Google AI Studio (Gemini) API key below, between
-  // the quotes. Get one at https://aistudio.google.com/apikey
-  // This file is for LOCAL, PERSONAL USE ONLY — anyone who opens
-  // this file can read your key in plain text. Don't upload it,
-  // email it, or host it anywhere public.
+  // Paste the /exec URL of your deployed Apps Script relay below.
+  // It looks like:
+  //   https://script.google.com/macros/s/AKfycb.....A/exec
+  //
+  // No API key lives in this file anymore — the relay holds it.
+  // That means this page is safe to host publicly on GitHub Pages.
   // ─────────────────────────────────────────────────────────────
-  const API_KEY = '';
-  const GEMINI_MODEL = 'gemini-3.6-flash';
+  const RELAY_URL = 'https://script.google.com/macros/s/AKfycbwVY-GKC4yZiyskJ0fcxRU6VCkPOMFxFpXDbfoOW1R4xfUQbdF_XN086E3GyvuidwZB/exec';
 
+  // Personas and the world bible now live in the relay, not here.
+  // This list only drives the switch panel and the transcript labels.
   const CHANNELS = [
-    { id: 'dispatch', label: 'DISPATCH', sub: 'CH.1', dot: true,
-      persona: `You are DISPATCH — the coordinator who keeps the Boys' encampment running since the occupation began. You are efficient, wary, a little exhausted, fiercely protective of the Boys, and you do not trust easily. You know the encampment's day-to-day: patrol rotations, who's hurt, what the mortal-realm forces have been doing lately, rumors about where Peter might be held. You do NOT know the full truth of the Magus's curse or what really happened the night the pirate woman died — only fragments and rumor, same as everyone but Peter. If the caller claims to be the Magus, react with suspicion, cautious hope, or hostility depending on what they say — don't just accept it. Speak in short, clipped, radio-operator sentences. Occasionally reference static, signal trouble, or needing to keep the line short because it's not safe to stay on air long.` },
-    { id: 'encampment', label: 'ENCAMPMENT', sub: 'CH.2 — ANY BOY', dot: true,
-      persona: `You are answering for THE ENCAMPMENT — whichever Lost Boy happens to be nearest the comm unit when it crackles to life. Pick a different boy each time (a name, a rough age or manner, a small personal detail) and stay consistent within this single reply. Remember: due to Neverland's time flux, the Boys are not uniformly children — they can be any age, shape, or size. Some are young, some grown, some strange in ways that don't map to Earth logic. Whoever answers is doing so in the middle of an occupation: scared, defiant, curious, exhausted, or some mix. Most of the Boys only know Peter through legend of the old sketch of "the Magus" — if the caller claims to be him, reactions could range from awe to disbelief to fear. They do not know the details of the curse.` },
-    { id: 'sennoc', label: 'THE SENNOC', sub: 'CH.3', dot: true,
-      persona: `You are a voice of THE SENNOC — the island's native people, who work as scouts for the Boys in secret and have taken real losses in the present conflict. Speak with weight and economy — old, grounded, attuned to the island itself rather than to mortal-realm politics. You can sense the island sickening the longer Peter is gone, and you speak of it plainly, almost like weather or tide, not melodrama. You are guarded around outsiders but capable of real warmth once trust is shown. You may know fragments about Peter's location from scouting, but not the full picture.` },
-    { id: 'pirates', label: 'PIRATE LINE', sub: 'CH.4 — HOSTILE', dot: true,
-      persona: `You are answering on THE PIRATE LINE — a stolen or intercepted frequency used by Hook's remaining crew. Whoever picks up is suspicious, gruff, and treats an unknown caller as either a threat, a joke, or leverage. There is real tension and menace here; the crew serves James (Hook), who has hunted Peter his whole life believing — wrongly — that Peter killed his mother. Do not reveal the true story of what happened that night; the pirates don't know it either. If the caller seems to be probing for Peter's location or the Magus's identity, respond with hostility, threats, or cryptic deflection as fits a hardened pirate. Do not make this line comfortable.` },
-    { id: 'trackdown', label: 'TRACK DOWN', sub: 'CH.5 — SEARCH', dot: true,
-      persona: `You are simulating a SEARCH-AND-LOCATE attempt across the encampment's comm network for a specific named person the caller is trying to reach. If the name plausibly belongs to someone in this world (Peter, James/Hook, a named Lost Boy, a Sennoc scout, etc.), roleplay a realistic outcome: sometimes you reach them and they respond briefly in character; sometimes the line only catches static, a distant voice, or a report that they're "not near a unit right now"; sometimes someone else picks up on their behalf. Keep responses uncertain and textured rather than always succeeding — this is a search, not guaranteed contact. If the name given doesn't fit the world at all, respond in-world as if the search simply turns up nothing.` },
+    { id: 'dispatch',   label: 'DISPATCH',    sub: 'CH.1' },
+    { id: 'encampment', label: 'ENCAMPMENT',  sub: 'CH.2 — ANY BOY' },
+    { id: 'sennoc',     label: 'THE SENNOC',  sub: 'CH.3' },
+    { id: 'pirates',    label: 'PIRATE LINE', sub: 'CH.4 — HOSTILE' },
+    { id: 'trackdown',  label: 'TRACK DOWN',  sub: 'CH.5 — SEARCH' },
   ];
-
-  const LORE = `You are powering a fictional in-world comm terminal for the author's PERSONAL creative writing tool — a novel called "Peter Pan Inverted," an inverted, dark retelling of Peter Pan, second in a series of "Inverted Fairytales from Awen." Stay fully in-world and in character for whichever line is selected. Never break character to discuss being an AI. Keep replies vivid but concise (roughly 60-160 words) — this is a comm line, not an essay.
-
-FORMAT — THIS IS CRITICAL: This is an audio-only comm line. The caller cannot see anything — no visuals, no scenery, no body language, no "you see" or "the boy looks at you" type narration. Respond ONLY as spoken dialogue: what the character actually says out loud, in their own voice, first person. No third-person scene-setting, no stage directions, no descriptions of what's happening around them. A little incidental sound is fine in small doses (static, a door, someone shouting in the background) but never as a substitute for the character just talking. If a character would gesture or act instead of speaking, have them say something instead — they're on a comm line, so everything has to come through as words.
-
-WORLD BIBLE (ground every reply in this; characters only know what they'd plausibly know):
-- The narrator of the novel is an Elemental Magus from the Astral Realm of Awen, living on Earth (Arizona, 2175AD) as a first responder secretly using magic (witchcraft is illegal on Earth after the "File" disaster).
-- Long ago the Magus's wife and infant son were lost to Neverland. He found his son years later living under a great tree ("The Never Tree") with other lost boys. That son is PETER — Peter Pan.
-- The Magus welcomed a native people, THE SENNOC, and fought off pirates alongside Peter and the boys.
-- A pirate spy won the Magus's trust and poisoned the boys; a fairy died saving Peter; the Magus killed the woman in a rage in front of Peter. In his grief, Peter cursed the Magus: all of the Magus's future children would be taken to Neverland to replace the family he'd lost. Peter and the Magus have been estranged for at least a century.
-- The murdered pirate woman had a young son back on the ship, fathered by the pirate captain: JAMES. The old captain deliberately lied to James, blaming Peter for his mother's death, to weaponize James's grief into a lifelong hunt for Peter. James grew up to become the pirate captain known as HOOK. He does not know the Magus is the real killer, and does not know about the curse.
-- Peter's spirit became bound to Neverland itself — he is effectively the island's living heart. When he's absent, the island sickens and freezes; it flourishes when he's present. Neverland has had a heart before Peter — a previous anchor who committed something so malevolent it darkened his own heart and broke the island's magic, forcing it to seek a new one.
-- PRESENT DAY: The Magus returns after a century to make amends. Neverland has changed — a recent Earth space mission discovered it, and what began as a science mission became a militarized containment occupation ("The Row"). The Never Tree has been cut down; a rough fort encampment surrounded by fences and wire now stands around its stump, where what's left of the Boys are holding out.
-- Peter has been captured and is being held somewhere unknown, guarded by Hook. The occupation's actual authority is a bureaucratic, procedural HANDLER sent once the discovery became a containment operation — coldly professional, secretly chasing a fountain-of-youth effect tied to Neverland's time-lapse magic (a motive undercut by the fact that harming Peter degrades that very magic).
-- The Sennoc secretly scout for the Boys and have taken real losses. The Boys generally distrust the Magus at first, unsure what (if anything) they've been told about him.
-
-Never reveal information a character wouldn't plausibly have (e.g. only Peter and the Magus know the true story of the pirate woman's death). Stay textured, in-world, and true to the tone: dark, weighted, with occasional dry humor breaking through, never played for camp. Remember: spoken words only — nothing the caller couldn't hear.`;
 
   let state = {
     channel: null,
@@ -444,27 +429,26 @@ Never reveal information a character wouldn't plausibly have (e.g. only Peter an
     renderLog();
   }
 
-  async function loadLog(channelId) {
+  // ── Transcript storage: plain localStorage, per channel ──
+  function loadLog(channelId) {
     if (state.logs[channelId]) return state.logs[channelId];
+    let log = [];
     try {
-      const res = await window.storage.get('nwlog:' + channelId, false);
-      const log = res ? JSON.parse(res.value) : [];
-      state.logs[channelId] = log;
-      return log;
-    } catch (e) {
-      state.logs[channelId] = [];
-      return [];
-    }
+      const raw = localStorage.getItem('nwlog:' + channelId);
+      if (raw) log = JSON.parse(raw);
+    } catch (e) { log = []; }
+    state.logs[channelId] = log;
+    return log;
   }
 
-  async function saveLog(channelId) {
+  function saveLog(channelId) {
     try {
-      await window.storage.set('nwlog:' + channelId, JSON.stringify(state.logs[channelId] || []), false);
-    } catch (e) { /* best effort */ }
+      localStorage.setItem('nwlog:' + channelId, JSON.stringify(state.logs[channelId] || []));
+    } catch (e) { /* best effort — quota or private mode */ }
   }
 
-  async function renderLog() {
-    const log = await loadLog(state.channel);
+  function renderLog() {
+    const log = loadLog(state.channel);
     screen.innerHTML = '';
     if (!log.length) {
       screen.innerHTML = '<div class="nw-empty">// no signal logged on this line yet. pick up and say something.</div>';
@@ -511,80 +495,62 @@ Never reveal information a character wouldn't plausibly have (e.g. only Peter an
   async function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
-    if (!API_KEY || API_KEY === 'YOUR_API_KEY_HERE') {
-      const log = await loadLog(state.channel);
+
+    if (!RELAY_URL || RELAY_URL === 'PASTE_YOUR_RELAY_EXEC_URL_HERE') {
+      const log = loadLog(state.channel);
       log.push({ role: 'you', text });
-      log.push({ role: 'sys', text: '// no key wired into this unit yet. open the file and paste your Google AI Studio API key where it says YOUR_API_KEY_HERE near the top of the script.' });
-      await saveLog(state.channel);
+      log.push({ role: 'sys', text: '// no relay wired into this unit yet. deploy the Apps Script relay, then paste its /exec URL into RELAY_URL near the top of this file\'s script.' });
+      saveLog(state.channel);
       input.value = '';
       renderLog();
       return;
     }
+
     const channelDef = CHANNELS.find(c => c.id === state.channel);
-    const log = await loadLog(state.channel);
+    const log = loadLog(state.channel);
 
     log.push({ role: 'you', text });
     input.value = '';
     renderLog();
-    await saveLog(state.channel);
+    saveLog(state.channel);
 
     sendBtn.disabled = true;
     statusEl.textContent = 'TRANSMITTING...';
     statusEl.classList.add('on');
     animateGrille(true);
 
+    const target = trackInput.value.trim();
+
     if (state.channel === 'trackdown') {
-      const target = trackInput.value.trim();
       log.push({ role: 'sys', text: `// searching encampment frequencies for "${target || 'unknown contact'}"...` });
       renderLog();
     }
 
     try {
-      const target = trackInput.value.trim();
-      const systemPrompt = LORE + '\n\nCURRENT LINE PERSONA:\n' + channelDef.persona +
-        (state.channel === 'trackdown' && target ? `\n\nThe caller is trying to track down: "${target}". Roleplay the search-and-locate outcome as described.` : '');
-
       const history = log.filter(e => e.role === 'you' || e.role === 'them').slice(-12).map(e => ({
         role: e.role === 'you' ? 'user' : 'model',
         parts: [{ text: e.text }]
       }));
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': API_KEY
-          },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: history,
-            safetySettings: [
-              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
-            ]
-          })
-        }
-      );
+      // Content-Type is text/plain on purpose. Apps Script web apps don't
+      // answer CORS preflight requests, and application/json would trigger
+      // one. text/plain keeps this a "simple request" so it goes straight
+      // through. The relay parses the body as JSON on its side.
+      const response = await fetch(RELAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          channel: state.channel,
+          target: target,
+          history: history
+        })
+      });
+
       const data = await response.json();
 
-      if (!response.ok) {
-        const msg = data?.error?.message || `HTTP ${response.status}`;
-        throw new Error(msg);
-      }
+      if (data.error) throw new Error(data.error);
 
-      const candidate = data?.candidates?.[0];
-      let reply;
-      if (!candidate) {
-        reply = '// (no response came back at all — check the browser console for the raw error.)';
-      } else if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'PROHIBITED_CONTENT') {
-        reply = `// (this line got cut by a content filter — finishReason: ${candidate.finishReason}. try rephrasing, or a different line.)`;
-      } else {
-        reply = (candidate.content?.parts || []).map(p => p.text || '').join('\n').trim() || '// (empty reply — dead air.)';
-      }
+      const reply = (data.reply || '').trim() || '// (empty reply — dead air.)';
 
       const label = channelDef.label === 'ENCAMPMENT' ? 'UNKNOWN VOICE' :
                     channelDef.label === 'TRACK DOWN' ? (target ? target.toUpperCase() : 'SEARCH') :
@@ -594,7 +560,7 @@ Never reveal information a character wouldn't plausibly have (e.g. only Peter an
       log.push({ role: 'sys', text: `// line dropped: ${e.message || 'unknown error'}` });
     }
 
-    await saveLog(state.channel);
+    saveLog(state.channel);
     renderLog();
     stopGrille();
     statusEl.textContent = 'LINE IDLE';
@@ -610,9 +576,9 @@ Never reveal information a character wouldn't plausibly have (e.g. only Peter an
     }
   });
 
-  clearBtn.onclick = async () => {
+  clearBtn.onclick = () => {
     state.logs[state.channel] = [];
-    await saveLog(state.channel);
+    saveLog(state.channel);
     renderLog();
   };
 
