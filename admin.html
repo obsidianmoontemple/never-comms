@@ -129,7 +129,13 @@
       if (data.error) throw new Error(data.error);
       
       loreData = {};
-      data.lore.forEach(item => { loreData[item.key] = item.content; });
+      const loreArray = Array.isArray(data.lore) ? data.lore : [];
+      loreArray.forEach(item => { 
+        if (item && item.key) {
+          loreData[item.key] = item.content || ''; 
+        }
+      });
+
       renderSidebar();
       sysStatus.textContent = 'SYSTEM ONLINE';
     } catch (e) {
@@ -182,7 +188,6 @@
     loreData[safeKey] = "// Enter your notes, events, or character hooks here...";
     renderSidebar();
     
-    // Find and select the newly created button
     const buttons = document.querySelectorAll('.doc-btn');
     buttons.forEach(b => {
       if (b.textContent.toLowerCase() === safeKey) {
