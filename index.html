@@ -361,17 +361,10 @@
 <script>
 (function(){
   // ─────────────────────────────────────────────────────────────
-  // Paste the /exec URL of your deployed Apps Script relay below.
-  // It looks like:
-  //   https://script.google.com/macros/s/AKfycb.....A/exec
-  //
-  // No API key lives in this file anymore — the relay holds it.
-  // That means this page is safe to host publicly on GitHub Pages.
+  // Paste your deployed Apps Script /exec URL below
   // ─────────────────────────────────────────────────────────────
   const RELAY_URL = 'https://script.google.com/macros/s/AKfycbwVY-GKC4yZiyskJ0fcxRU6VCkPOMFxFpXDbfoOW1R4xfUQbdF_XN086E3GyvuidwZB/exec';
 
-  // Personas and the world bible now live in the relay, not here.
-  // This list only drives the switch panel and the transcript labels.
   const CHANNELS = [
     { id: 'dispatch',   label: 'DISPATCH',    sub: 'CH.1' },
     { id: 'encampment', label: 'ENCAMPMENT',  sub: 'CH.2 — ANY BOY' },
@@ -409,7 +402,6 @@
 
   function selectChannel(id) {
     if (state.channel === id) {
-      // flip the active line back off — all switches down
       state.channel = null;
     } else {
       state.channel = id;
@@ -429,7 +421,6 @@
     renderLog();
   }
 
-  // ── Transcript storage: plain localStorage, per channel ──
   function loadLog(channelId) {
     if (state.logs[channelId]) return state.logs[channelId];
     let log = [];
@@ -444,7 +435,7 @@
   function saveLog(channelId) {
     try {
       localStorage.setItem('nwlog:' + channelId, JSON.stringify(state.logs[channelId] || []));
-    } catch (e) { /* best effort — quota or private mode */ }
+    } catch (e) { /* best effort */ }
   }
 
   function renderLog() {
@@ -487,6 +478,7 @@
     tick();
     grille._stop = () => { cancelAnimationFrame(raf); bars.forEach(b => b.style.height = '4px'); };
   }
+
   function stopGrille() {
     grille.classList.remove('live');
     if (grille._stop) grille._stop();
@@ -499,7 +491,7 @@
     if (!RELAY_URL || RELAY_URL === 'PASTE_YOUR_RELAY_EXEC_URL_HERE') {
       const log = loadLog(state.channel);
       log.push({ role: 'you', text });
-      log.push({ role: 'sys', text: '// no relay wired into this unit yet. deploy the Apps Script relay, then paste its /exec URL into RELAY_URL near the top of this file\'s script.' });
+      log.push({ role: 'sys', text: '// no relay wired into this unit yet. deploy the Apps Script relay, then paste its /exec URL into RELAY_URL.' });
       saveLog(state.channel);
       input.value = '';
       renderLog();
@@ -527,22 +519,13 @@
     }
 
     try {
-      const history = log.filter(e => e.role === 'you' || e.role === 'them').slice(-12).map(e => ({
-        role: e.role === 'you' ? 'user' : 'model',
-        parts: [{ text: e.text }]
-      }));
-
-      // Content-Type is text/plain on purpose. Apps Script web apps don't
-      // answer CORS preflight requests, and application/json would trigger
-      // one. text/plain keeps this a "simple request" so it goes straight
-      // through. The relay parses the body as JSON on its side.
       const response = await fetch(RELAY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           channel: state.channel,
           target: target,
-          history: history
+          message: text
         })
       });
 
