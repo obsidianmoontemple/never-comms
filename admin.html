@@ -26,19 +26,26 @@
   }
   
   .sidebar {
-    width: 250px; background: #12160e; border-right: 1px solid #262c22;
-    padding: 20px; overflow-y: auto;
+    width: 280px; background: #12160e; border-right: 1px solid #262c22;
+    padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;
   }
-  .sidebar h2 { font-size: 14px; color: #948e7a; margin-top: 0; border-bottom: 1px solid #262c22; padding-bottom: 10px; }
+  .sidebar-section h2 { font-size: 12px; color: #948e7a; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #262c22; padding-bottom: 4px; }
   
   .doc-btn {
     display: block; width: 100%; text-align: left; background: transparent;
     border: 1px solid transparent; color: #ece7d6; font-family: inherit;
-    padding: 10px; margin-bottom: 5px; cursor: pointer; border-radius: 4px;
+    padding: 8px 10px; margin-bottom: 4px; cursor: pointer; border-radius: 4px; font-size: 12px;
   }
   .doc-btn:hover { background: #1a1f17; }
   .doc-btn.active { background: #262c22; border-color: #b5651d; color: #e8a33d; }
   
+  .new-btn {
+    background: #4a5c3f; color: #ece7d6; border: none; padding: 10px;
+    font-family: inherit; font-weight: bold; cursor: pointer; border-radius: 4px;
+    width: 100%; text-align: center; font-size: 12px; transition: background 0.2s;
+  }
+  .new-btn:hover { background: #5a704f; }
+
   .editor {
     flex: 1; display: flex; flex-direction: column; padding: 20px;
   }
@@ -62,7 +69,6 @@
   }
   button.save-btn:hover { background: #e8a33d; }
   button.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
 </style>
 </head>
 <body>
@@ -74,9 +80,17 @@
 
 <div class="container">
   <div class="sidebar">
-    <h2>DATA RECORDS</h2>
-    <button class="save-btn" style="width:100%; margin-bottom: 15px; background: #4a5c3f; color: #ece7d6;" onclick="createNewRecord()">+ NEW RECORD</button>
-    <div id="fileList">Loading files...</div>
+    <button class="new-btn" onclick="createNewRecord()">+ NEW RECORD / FILE</button>
+    
+    <div class="sidebar-section">
+      <h2>Core System</h2>
+      <div id="coreList"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>Timeline & Characters</h2>
+      <div id="customList"></div>
+    </div>
   </div>
   
   <div class="editor">
@@ -94,11 +108,14 @@
   let loreData = {};
   let currentKey = null;
 
-  const fileList = document.getElementById('fileList');
+  const coreList = document.getElementById('coreList');
+  const customList = document.getElementById('customList');
   const editorArea = document.getElementById('editorArea');
   const currentFileLbl = document.getElementById('currentFile');
   const saveBtn = document.getElementById('saveBtn');
   const sysStatus = document.getElementById('sysStatus');
+
+  const coreKeys = ['world_bible', 'dispatch', 'encampment', 'sennoc', 'pirates', 'trackdown'];
 
   async function loadAllLore() {
     try {
@@ -122,13 +139,21 @@
   }
 
   function renderSidebar() {
-    fileList.innerHTML = '';
-    Object.keys(loreData).forEach(key => {
+    coreList.innerHTML = '';
+    customList.innerHTML = '';
+
+    Object.keys(loreData).sort().forEach(key => {
       const btn = document.createElement('button');
       btn.className = 'doc-btn';
+      if (key === currentKey) btn.classList.add('active');
       btn.textContent = key.toUpperCase();
       btn.onclick = () => selectFile(key, btn);
-      fileList.appendChild(btn);
+
+      if (coreKeys.includes(key)) {
+        coreList.appendChild(btn);
+      } else {
+        customList.appendChild(btn);
+      }
     });
   }
 
@@ -144,7 +169,7 @@
   }
 
   function createNewRecord() {
-    const key = prompt("Enter a simple ID for this record (e.g., timeline, char_hook):");
+    const key = prompt("Enter a name for this record (e.g., timeline, char_hook, events):");
     if (!key || key.trim() === '') return;
     
     const safeKey = key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -154,13 +179,16 @@
       return;
     }
     
-    loreData[safeKey] = "// Start typing character info or timeline events here. Hit SAVE CHANGES to push to the database.";
+    loreData[safeKey] = "// Enter your notes, events, or character hooks here...";
     renderSidebar();
     
-    const btns = document.querySelectorAll('.doc-btn');
-    if(btns.length > 0) {
-        btns[btns.length - 1].click();
-    }
+    // Find and select the newly created button
+    const buttons = document.querySelectorAll('.doc-btn');
+    buttons.forEach(b => {
+      if (b.textContent.toLowerCase() === safeKey) {
+        b.click();
+      }
+    });
   }
 
   saveBtn.onclick = async () => {
