@@ -75,6 +75,7 @@
 <div class="container">
   <div class="sidebar">
     <h2>DATA RECORDS</h2>
+    <button class="save-btn" style="width:100%; margin-bottom: 15px; background: #4a5c3f; color: #ece7d6;" onclick="createNewRecord()">+ NEW RECORD</button>
     <div id="fileList">Loading files...</div>
   </div>
   
@@ -88,9 +89,6 @@
 </div>
 
 <script>
-  // ─────────────────────────────────────────────────────────────
-  // PASTE YOUR GOOGLE APPS SCRIPT RELAY URL HERE
-  // ─────────────────────────────────────────────────────────────
   const RELAY_URL = 'https://script.google.com/macros/s/AKfycbwVY-GKC4yZiyskJ0fcxRU6VCkPOMFxFpXDbfoOW1R4xfUQbdF_XN086E3GyvuidwZB/exec';
 
   let loreData = {};
@@ -145,6 +143,26 @@
     saveBtn.disabled = false;
   }
 
+  function createNewRecord() {
+    const key = prompt("Enter a simple ID for this record (e.g., timeline, char_hook):");
+    if (!key || key.trim() === '') return;
+    
+    const safeKey = key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    
+    if (loreData[safeKey]) {
+      alert("That record already exists!");
+      return;
+    }
+    
+    loreData[safeKey] = "// Start typing character info or timeline events here. Hit SAVE CHANGES to push to the database.";
+    renderSidebar();
+    
+    const btns = document.querySelectorAll('.doc-btn');
+    if(btns.length > 0) {
+        btns[btns.length - 1].click();
+    }
+  }
+
   saveBtn.onclick = async () => {
     if (!currentKey) return;
     
@@ -167,7 +185,7 @@
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      loreData[currentKey] = newContent; // Update local cache
+      loreData[currentKey] = newContent; 
       sysStatus.textContent = 'SAVE COMPLETE';
       sysStatus.style.color = '#948e7a';
     } catch (e) {
@@ -178,7 +196,6 @@
     }
   };
 
-  // Boot up
   loadAllLore();
 </script>
 
