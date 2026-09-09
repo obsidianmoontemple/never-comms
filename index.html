@@ -518,29 +518,58 @@
       renderLog();
     }
 
-    try {
-      const response = await fetch(RELAY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          channel: state.channel,
-          target: target,
-          message: text
-        })
-      });
+    let attempt = 0;
+    const maxAttempts = 3;
+    let data = null;
+    let lastError = null;
 
-      const data = await response.json();
+    while (attempt < maxAttempts) {
+      attempt++;
+      
+      if (attempt > 1) {
+        statusEl.textContent = `RETRYING... (${attempt}/${maxAttempts})`;
+        await new Promise(r => setTimeout(r, 1500 * attempt));
+      }
 
-      if (data.error) throw new Error(data.error);
+      try {
+        const response = await fetch(RELAY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            channel: state.channel,
+            target: target,
+            message: text
+          })
+        });
 
+        data = await response.json();
+
+        if (data.error) {
+          const errMsg = data.error.toLowerCase();
+          if (errMsg.includes('high demand') || errMsg.includes('503') || errMsg.includes('overloaded')) {
+            throw new Error(data.error); 
+          } else {
+            lastError = new Error(data.error);
+            break; 
+          }
+        }
+
+        lastError = null;
+        break;
+
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    if (lastError) {
+      log.push({ role: 'sys', text: `// line dropped after ${attempt} attempts: ${lastError.message || 'unknown error'}` });
+    } else {
       const reply = (data.reply || '').trim() || '// (empty reply — dead air.)';
-
       const label = channelDef.label === 'ENCAMPMENT' ? 'UNKNOWN VOICE' :
                     channelDef.label === 'TRACK DOWN' ? (target ? target.toUpperCase() : 'SEARCH') :
                     channelDef.label;
       log.push({ role: 'them', label, text: reply });
-    } catch (e) {
-      log.push({ role: 'sys', text: `// line dropped: ${e.message || 'unknown error'}` });
     }
 
     saveLog(state.channel);
